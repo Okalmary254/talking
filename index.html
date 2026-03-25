@@ -2,269 +2,836 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Talking Stage Chat</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Talking Stage</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
-body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --wa-green: #00a884;
+  --wa-green-dark: #008069;
+  --wa-green-light: #d9fdd3;
+  --wa-bg: #efeae2;
+  --wa-header: #202c33;
+  --wa-header2: #2a3942;
+  --wa-bubble-in: #ffffff;
+  --wa-bubble-out: #d9fdd3;
+  --wa-text: #111b21;
+  --wa-text-secondary: #667781;
+  --wa-input-bg: #ffffff;
+  --wa-divider: #e9edef;
+  --wa-tick: #53bdeb;
+  --wa-shadow: rgba(11,20,26,.13);
+  --wa-pattern: #ddd5c8;
 }
 
-.chat-container {
-    max-width: 420px;
-    margin: auto;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: #efeae2;
-    border-radius: 12px;
-    overflow: hidden;
+html, body {
+  height: 100%;
+  background: #111b21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
 }
 
-.header {
-    background: linear-gradient(90deg, #075e54, #128c7e);
-    color: white;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+/* WhatsApp wallpaper pattern */
+.wa-wallpaper {
+  position: absolute;
+  inset: 0;
+  background-color: var(--wa-bg);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8bfb0' fill-opacity='0.25'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  z-index: 0;
 }
 
-.header img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
+.phone {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
+  max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  background: var(--wa-bg);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.6);
 }
 
-.chat-box {
-    flex: 1;
-    overflow-y: auto;
-    padding: 15px;
+/* ─── HEADER ─── */
+.wa-header {
+  background: var(--wa-header);
+  padding: 0 10px 0 6px;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  flex-shrink: 0;
+  gap: 6px;
+  position: relative;
+  z-index: 10;
 }
 
-.message {
-    margin: 8px 0;
-    max-width: 75%;
-    padding: 10px 12px;
-    border-radius: 10px;
-    font-size: 14px;
-    animation: fadeIn 0.3s ease;
+.back-btn {
+  color: #aebac1;
+  font-size: 22px;
+  padding: 8px 6px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-@keyframes fadeIn {
-    from {opacity: 0; transform: translateY(5px);}
-    to {opacity: 1;}
+.header-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.header-avatar-wrap:hover .av-edit { opacity: 1; }
+.av-edit {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+#headerAvatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }
 
-.bot {
-    background: white;
-    align-self: flex-start;
+.header-info {
+  flex: 1;
+  overflow: hidden;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.header-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e9edef;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.header-status {
+  font-size: 12.5px;
+  color: #8696a0;
+  line-height: 1.3;
 }
 
-.user {
-    background: #dcf8c6;
-    align-self: flex-end;
+.header-icons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.hico {
+  color: #aebac1;
+  font-size: 20px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.hico:hover { background: rgba(255,255,255,0.08); }
+
+/* ─── WALLPAPER CHAT AREA ─── */
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  scroll-behavior: smooth;
+}
+.chat-scroll::-webkit-scrollbar { width: 5px; }
+.chat-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+
+.chat-area {
+  position: relative;
+  min-height: 100%;
+  padding: 8px 0 10px;
 }
 
-.typing {
-    font-style: italic;
-    font-size: 12px;
-    opacity: 0.7;
+/* ─── DATE PILL ─── */
+.date-pill {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 10px;
+}
+.date-pill span {
+  background: #fff8e1;
+  color: #54656f;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 1px var(--wa-shadow);
 }
 
-.input-area {
-    display: flex;
-    padding: 10px;
-    background: #f0f0f0;
-    align-items: center;
-    gap: 6px;
+/* ─── MESSAGES ─── */
+.msg-wrap {
+  display: flex;
+  padding: 1px 9px;
+  align-items: flex-end;
+  gap: 4px;
+}
+.msg-wrap.incoming { justify-content: flex-start; }
+.msg-wrap.outgoing { justify-content: flex-end; }
+
+/* Small avatar for incoming */
+.msg-av {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-bottom: 2px;
+  align-self: flex-end;
+}
+.msg-wrap.outgoing .msg-av { display: none; }
+
+.bubble {
+  max-width: 72%;
+  min-width: 60px;
+  padding: 6px 7px 8px 9px;
+  border-radius: 7.5px;
+  font-size: 14.2px;
+  line-height: 19px;
+  color: var(--wa-text);
+  position: relative;
+  word-wrap: break-word;
+  box-shadow: 0 1px 0.5px var(--wa-shadow);
 }
 
-input[type="text"] {
-    flex: 1;
-    padding: 10px;
-    border-radius: 20px;
-    border: none;
+/* Tail shapes — real WhatsApp style */
+.bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 9px;
+  height: 13px;
+}
+.bubble.incoming {
+  background: var(--wa-bubble-in);
+  border-top-left-radius: 0;
+  margin-left: 0;
+}
+.bubble.incoming::before {
+  left: -8px;
+  background: radial-gradient(circle at 0% 100%, transparent 70%, var(--wa-bubble-in) 70%);
+  border-bottom-right-radius: 10px;
+  /* SVG tail */
+  background: none;
+  border-left: none;
+}
+/* Use clip-path tail approach */
+.bubble.incoming {
+  clip-path: none;
 }
 
-button {
-    padding: 10px 15px;
-    border: none;
-    background: #075e54;
-    color: white;
-    border-radius: 20px;
-    cursor: pointer;
+/* Tail via pseudo element + overflow visible */
+.msg-wrap.incoming .bubble::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -8px;
+  width: 9px; height: 13px;
+  background: var(--wa-bubble-in);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  border-radius: 0 0 0 3px;
+}
+.msg-wrap.outgoing .bubble::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -8px;
+  width: 9px; height: 13px;
+  background: var(--wa-bubble-out);
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+  border-radius: 0 0 3px 0;
 }
 
-/* Paperclip upload button styling */
-#uploadBtn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0 10px;
-    background: #128c7e;
-    border-radius: 50%;
-    font-size: 18px;
-    color: white;
-    cursor: pointer;
+.bubble.outgoing {
+  background: var(--wa-bubble-out);
+  border-top-right-radius: 0;
 }
-#avatarInput {
-    display: none;
+
+/* Message meta row */
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 2px;
+  float: right;
+  margin-left: 6px;
+  height: 15px;
+}
+.meta .time {
+  font-size: 11px;
+  color: var(--wa-text-secondary);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.bubble.outgoing .meta .time { color: #667781; }
+.ticks {
+  color: var(--wa-tick);
+  font-size: 13px;
+  line-height: 15px;
+}
+
+/* Typing bubble */
+.typing-bubble {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 14px;
+  width: 58px;
+}
+.typing-bubble .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #8696a0;
+  animation: wa-bounce 1.4s infinite ease-in-out;
+}
+.typing-bubble .dot:nth-child(1) { animation-delay: 0s; }
+.typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes wa-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Pop in */
+.msg-wrap {
+  animation: msgIn 0.18s ease-out both;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ─── SYSTEM / ENCRYPTION NOTICE ─── */
+.sys-notice {
+  display: flex;
+  justify-content: center;
+  margin: 6px 16px;
+}
+.sys-notice span {
+  background: #fff8e1;
+  color: #54656f;
+  font-size: 11.5px;
+  text-align: center;
+  padding: 7px 14px;
+  border-radius: 8px;
+  box-shadow: 0 1px 1px var(--wa-shadow);
+  line-height: 1.5;
+}
+.sys-notice .lock-icon { font-size: 11px; }
+
+/* ─── INPUT AREA ─── */
+.wa-input-area {
+  background: var(--wa-header);
+  padding: 6px 6px 6px 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.emoji-btn, .attach-btn, .voice-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #8696a0;
+  font-size: 22px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.emoji-btn:hover, .attach-btn:hover, .voice-btn:hover {
+  color: #aebac1;
+  background: rgba(255,255,255,0.08);
+}
+
+.input-pill {
+  flex: 1;
+  background: #2a3942;
+  border-radius: 24px;
+  display: flex;
+  align-items: flex-end;
+  padding: 5px 12px 5px 10px;
+  min-height: 42px;
+  max-height: 120px;
+  gap: 6px;
+}
+
+#userInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 15px;
+  color: #e9edef;
+  line-height: 22px;
+  resize: none;
+  max-height: 110px;
+  overflow-y: auto;
+  padding: 3px 0;
+  align-self: center;
+}
+#userInput::placeholder { color: #8696a0; }
+#userInput::-webkit-scrollbar { width: 3px; }
+#userInput::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+
+.send-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--wa-green);
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s, transform 0.1s;
+  margin-left: 2px;
+}
+.send-btn:hover { background: #00917a; }
+.send-btn:active { transform: scale(0.92); }
+.send-btn svg { pointer-events: none; }
+
+#avatarInput { display: none; }
+
+/* ─── PROGRESS BAR (thin top of chat) ─── */
+.progress-bar-wrap {
+  height: 3px;
+  background: rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--wa-green);
+  transition: width 0.5s ease;
+  width: 0%;
+}
+
+/* ─── FINAL SYSTEM MESSAGE ─── */
+.final-notice {
+  display: flex;
+  justify-content: center;
+  margin: 10px 16px 4px;
+}
+.final-notice span {
+  background: #dcf8c6;
+  color: #1a6b40;
+  font-size: 12px;
+  text-align: center;
+  padding: 9px 16px;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px var(--wa-shadow);
+  line-height: 1.6;
+  max-width: 300px;
+  font-weight: 500;
+
+  .header-icons {
+  display: flex;
+  gap: 15px;
+  margin-left: auto; /* pushes icons to the right */
+}
+
+.header-icons .hico i {
+  font-size: 18px;
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.header-icons .hico i:hover {
+  color: #d4d4d4;
+}
 }
 </style>
 </head>
-
 <body>
 
-<div class="chat-container">
-    <div class="header">
-        <img id="userAvatar" src="https://i.pinimg.com/736x/58/76/01/587601c5f2994d9222065d40e6c6dc02.jpg" />
-        <div id="chatTitle">Talking Stage</div>
-    </div>
+<div class="wa-wallpaper"></div>
 
-    <div class="chat-box" id="chatBox"></div>
+<div class="phone">
 
-    <div class="input-area">
-        <input type="text" id="userInput" placeholder="Type your answer...">
-        <!-- Paperclip Upload -->
-        <label id="uploadBtn" for="avatarInput">📎</label>
-        <input type="file" id="avatarInput" accept="image/*">
-        <button onclick="sendMessage()">Send</button>
+  <!-- Header -->
+  <div class="wa-header">
+    <div class="back-btn">‹</div>
+    <div class="header-avatar-wrap" onclick="document.getElementById('avatarInput').click()" title="Tap to change photo">
+      <img id="headerAvatar" src="https://i.pinimg.com/736x/58/76/01/587601c5f2994d9222065d40e6c6dc02.jpg" alt="">
+      <div class="av-edit">✏️</div>
     </div>
+    <input type="file" id="avatarInput" accept="image/*">
+    <div class="header-info">
+      <div class="header-name" id="headerName">Talking Stage 💬</div>
+      <div class="header-status" id="headerStatus">online</div>
+    </div>
+    <div class="header-icons">
+        <span class="hico"><i class="fas fa-video"></i></span>   <!-- Video call -->
+        <span class="hico"><i class="fas fa-phone"></i></span>   <!-- Audio call -->
+        <span class="hico"><i class="fas fa-ellipsis-v"></i></span> <!-- More options -->
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressFill"></div>
+  </div>
+
+  <!-- Chat scroll -->
+  <div class="chat-scroll" id="chatScroll">
+    <div class="chat-area" id="chatArea">
+      <div class="date-pill"><span>TODAY</span></div>
+      <div class="sys-notice">
+        <span><span class="lock-icon">🔒</span> Messages are end-to-end encrypted. No one outside of this chat can read them.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div class="wa-input-area">
+    <button class="emoji-btn">😊</button>
+    <div class="input-pill">
+      <button class="attach-btn" onclick="document.getElementById('avatarInput').click()" title="Change photo">📎</button>
+      <textarea id="userInput" rows="1" placeholder="Message" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
+    </div>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
 </div>
 
 <script>
 const { jsPDF } = window.jspdf;
 
+// ─── Questions
 const questions = [
-    () => "Hey... before we get lost in vibes, what's your name?",
-    (n) => `Nice to meet you, ${n}. Where are you from?`,
-    (n) => `What are you looking for right now?`,
-    (n) => `Tell me ${n}, what does a normal day look like?`,
-    (n) => `What are you focused on these days?`,
-    (n) => `What are your non-negotiables?`,
-    (n) => `What does respect mean to you?`,
-    (n) => `Be honest ${n}... what’s your biggest red flag?`,
-    (n) => `What do you enjoy doing?`,
-    (n) => `Indoors or outdoors?`,
-    (n) => `How do you communicate?`,
-    (n) => `When things get messy, how do you handle conflict?`,
-    (n) => `What does a healthy relationship look like to you?`,
-    (n) => `Are you emotionally available right now?`,
-    (n) => `What do you expect from your partner?`,
-    (n) => `What’s your ideal date like?`,
-    (n) => `What makes you genuinely happy, ${n}?`,
-    (n) => `What are you healing from?`,
-    (n) => `Finally... what should love feel like for you?`
+  () => "Hey 👋 Before we get into it — what's your name?",
+  (n) => `Nice to meet you, ${n} 😊 Where are you from?`,
+  (n) => `So ${n}... what are you actually looking for right now? Be honest.`,
+  (n) => `Walk me through a normal day in your life.`,
+  (n) => `What are you most focused on building right now?`,
+  (n) => `What are your non-negotiables in a relationship?`,
+  (n) => `What does respect look like to you?`,
+  (n) => `Real talk ${n} — what's your biggest red flag? 😅`,
+  (n) => `What do you enjoy doing for fun?`,
+  (n) => `Indoors or outdoors? And why?`,
+  (n) => `How do you usually communicate when something's bothering you?`,
+  (n) => `When things get messy, how do you handle conflict?`,
+  (n) => `What does a healthy relationship look like to you?`,
+  (n) => `Are you emotionally available right now? Like really? 🤔`,
+  (n) => `What are you expecting from a partner?`,
+  (n) => `Describe your ideal date. Don't hold back 😏`,
+  (n) => `What makes you genuinely happy, ${n}?`,
+  (n) => `What are you still healing from?`,
+  (n) => `Last one — what should love actually feel like for you? 💛`
 ];
 
 let answers = [];
-let currentQuestion = 0;
+let currentQ = 0;
 let userName = "";
 let avatarDataURL = "";
+let isWaiting = false;
 
-const chatBox = document.getElementById("chatBox");
+const chatArea = document.getElementById("chatArea");
+const chatScroll = document.getElementById("chatScroll");
+const userInput = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
 
-function addMessage(text, sender, isTyping=false) {
-    const msg = document.createElement("div");
-    msg.classList.add("message", sender);
-    if(isTyping) msg.classList.add("typing");
-    msg.innerText = text;
-    chatBox.appendChild(msg);
-    chatBox.scrollTop = chatBox.scrollHeight;
-    return msg;
+function now() {
+  return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function askQuestion() {
-    if (currentQuestion < questions.length) {
-        const typing = addMessage("typing...", "bot", true);
-
-        setTimeout(() => {
-            typing.remove();
-            let text = currentQuestion === 0 ? questions[0]() : questions[currentQuestion](userName);
-            addMessage(text, "bot");
-        }, 800);
-    } else {
-        finishChat();
-    }
+function scrollBottom() {
+  setTimeout(() => chatScroll.scrollTop = chatScroll.scrollHeight, 50);
 }
 
-function sendMessage() {
-    const input = document.getElementById("userInput");
-    const text = input.value.trim();
-    if (!text) return;
-
-    addMessage(text, "user");
-    answers.push(text);
-
-    if(currentQuestion === 0){
-        userName = text;
-        document.getElementById("chatTitle").innerText = `${userName}'s Talking Stage`;
-    }
-
-    input.value = "";
-    currentQuestion++;
-    setTimeout(askQuestion, 600);
+function updateProgress() {
+  const pct = (currentQ / questions.length) * 100;
+  document.getElementById("progressFill").style.width = pct + "%";
+  if (userName) {
+    document.getElementById("headerStatus").textContent = `${currentQ} of ${questions.length} answered`;
+  }
 }
 
-function uploadAvatar() {
-    const input = document.getElementById("avatarInput");
-    if(input.files && input.files[0]){
-        const reader = new FileReader();
-        reader.onload = function(e){
-            avatarDataURL = e.target.result;
-            document.getElementById("userAvatar").src = avatarDataURL;
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
+// ── Incoming message (bot)
+function addIncoming(text) {
+  return new Promise(resolve => {
+    // typing indicator
+    const typingWrap = document.createElement("div");
+    typingWrap.className = "msg-wrap incoming";
+    const av = document.createElement("img");
+    av.className = "msg-av";
+    av.src = "https://i.pinimg.com/736x/58/76/01/587601c5f2994d9222065d40e6c6dc02.jpg";
+    const typingBubble = document.createElement("div");
+    typingBubble.className = "bubble incoming typing-bubble";
+    typingBubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    typingWrap.appendChild(av);
+    typingWrap.appendChild(typingBubble);
+    chatArea.appendChild(typingWrap);
+    scrollBottom();
 
-function finishChat() {
-    addMessage(`That felt real, ${userName}. Let me wrap this into something beautiful... 📄`, "bot");
+    const delay = 700 + Math.min(text.length * 18, 900);
 
-    let content = `Talking Stage Responses\n\nName: ${userName}\n\n`;
-
-    questions.forEach((q, i) => {
-        let questionText = i === 0 ? q() : q(userName);
-        content += `${i+1}. ${questionText}\n`;
-        content += `Answer: ${answers[i] || ""}\n\n`;
-    });
-
-    generatePDF(content);
-    sendToWhatsApp();
-}
-
-function generatePDF(text) {
-    const doc = new jsPDF();
-    if(avatarDataURL){
-        doc.addImage(avatarDataURL, 'JPEG', 10, 10, 30, 30);
-        doc.text(text, 10, 50);
-    } else {
-        doc.text(text, 10, 10);
-    }
-    doc.save(`${userName}_Talking_Stage.pdf`);
-}
-
-function sendToWhatsApp() {
-    const msg = `Hey, it's ${userName}. I've completed the talking stage questions. Sending my responses now.`;
-    const url = `https://wa.me/254783845747?text=${encodeURIComponent(msg)}`;
     setTimeout(() => {
-        window.open(url, "_blank");
-    }, 1500);
+      typingWrap.remove();
+
+      const wrap = document.createElement("div");
+      wrap.className = "msg-wrap incoming";
+
+      const av2 = document.createElement("img");
+      av2.className = "msg-av";
+      av2.src = "https://i.pinimg.com/736x/58/76/01/587601c5f2994d9222065d40e6c6dc02.jpg";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble incoming";
+      bubble.innerHTML = `${escHtml(text)}<div class="meta"><span class="time">${now()}</span></div>`;
+
+      wrap.appendChild(av2);
+      wrap.appendChild(bubble);
+      chatArea.appendChild(wrap);
+      scrollBottom();
+      resolve();
+    }, delay);
+  });
 }
 
-// Event listener for paperclip
-document.getElementById("avatarInput").addEventListener("change", uploadAvatar);
+// ── Outgoing message (user)
+function addOutgoing(text) {
+  const wrap = document.createElement("div");
+  wrap.className = "msg-wrap outgoing";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble outgoing";
+  bubble.innerHTML = `${escHtml(text)}<div class="meta"><span class="time">${now()}</span><span class="ticks">✓✓</span></div>`;
+  wrap.appendChild(bubble);
+  chatArea.appendChild(wrap);
+  scrollBottom();
+}
 
-// start chat
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+async function askQuestion() {
+  if (currentQ < questions.length) {
+    isWaiting = true;
+    sendBtn.disabled = true;
+    document.getElementById("headerStatus").textContent = "typing...";
+    const text = currentQ === 0 ? questions[0]() : questions[currentQ](userName);
+    await addIncoming(text);
+    document.getElementById("headerStatus").textContent = userName ? `${currentQ} of ${questions.length} answered` : "online";
+    isWaiting = false;
+    sendBtn.disabled = false;
+    userInput.focus();
+  } else {
+    await finishChat();
+  }
+}
+
+async function sendMessage() {
+  if (isWaiting) return;
+  const text = userInput.value.trim();
+  if (!text) return;
+
+  addOutgoing(text);
+  answers.push(text);
+  userInput.value = "";
+  autoResize();
+
+  if (currentQ === 0) {
+    userName = text.split(" ")[0];
+    document.getElementById("headerName").textContent = `${userName} 💬`;
+  }
+
+  currentQ++;
+  updateProgress();
+  setTimeout(askQuestion, 500);
+}
+
+// ── Auto-resize textarea
+function autoResize() {
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, 110) + 'px';
+}
+userInput.addEventListener('input', autoResize);
+userInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ── Avatar upload
+document.getElementById("avatarInput").addEventListener("change", function () {
+  if (this.files && this.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      avatarDataURL = e.target.result;
+      document.getElementById("headerAvatar").src = avatarDataURL;
+      document.querySelectorAll(".msg-av").forEach(el => el.src = avatarDataURL);
+    };
+    reader.readAsDataURL(this.files[0]);
+  }
+});
+
+// ─── FINISH
+async function finishChat() {
+  isWaiting = true;
+  sendBtn.disabled = true;
+  userInput.disabled = true;
+  userInput.placeholder = "Chat complete";
+
+  // 1. Compile & download PDF first
+  const pdfGenerated = generatePDF();
+
+  // 2. Bot sends wrap-up
+  await addIncoming(`Amazing, ${userName}! You've answered all ${questions.length} questions 🎉`);
+  await sleep(700);
+  await addIncoming("Your responses have been compiled into a PDF and it's downloading now 📄");
+  await sleep(800);
+  await addIncoming("Please **open WhatsApp**, find the number, and send the PDF file as an attachment 📎 You'll find it in your Downloads folder.");
+
+  // 3. Final system notice
+  const noticeWrap = document.createElement("div");
+  noticeWrap.className = "final-notice";
+  noticeWrap.innerHTML = `<span>📎 PDF saved to your Downloads folder.<br>Open WhatsApp &amp; send it as an <strong>attachment</strong> to complete your Talking Stage.</span>`;
+  chatArea.appendChild(noticeWrap);
+  scrollBottom();
+
+  // 4. WhatsApp deep-link after small delay
+  setTimeout(() => {
+    const msg = `Hey! I'm ${userName}. I've just completed the Talking Stage questions. I'm sending my full responses as a PDF attachment now 📎`;
+    window.open(`https://wa.me/254783845747?text=${encodeURIComponent(msg)}`, "_blank");
+  }, 2200);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── PDF GENERATION
+function generatePDF() {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const ML = 40, MR = 40;
+  const CW = PW - ML - MR;
+  let y = 0;
+
+  // ── Page: Cover header bar
+  doc.setFillColor(32, 44, 51); // wa header dark
+  doc.rect(0, 0, PW, 80, 'F');
+
+  // Avatar circle
+  const avatarSrc = avatarDataURL || null;
+  if (avatarSrc) {
+    try {
+      doc.addImage(avatarSrc, 'JPEG', ML, 16, 48, 48, undefined, 'FAST');
+    } catch(e) {}
+  } else {
+    doc.setFillColor(0, 168, 132);
+    doc.circle(ML + 24, 40, 24, 'F');
+    doc.setFontSize(22);
+    doc.setTextColor(255,255,255);
+    doc.text((userName || "?")[0].toUpperCase(), ML + 24, 46, { align: 'center' });
+  }
+
+  // Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(233, 237, 239);
+  doc.text("Talking Stage", ML + 62, 36);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(134, 150, 160);
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  doc.text(`${userName} · ${dateStr}`, ML + 62, 56);
+
+  // Encryption notice
+  doc.setFontSize(9);
+  doc.setTextColor(134, 150, 160);
+  doc.text("🔒  End-to-end encrypted", PW - MR, 68, { align: 'right' });
+
+  y = 100;
+
+  // ── Q&A blocks
+  questions.forEach((qFn, i) => {
+    const qText = i === 0 ? qFn() : qFn(userName);
+    const aText = answers[i] || "(no answer)";
+
+    // Check if we need a new page
+    const testLines = doc.splitTextToSize(aText, CW - 20);
+    const blockH = 26 + 10 + (testLines.length * 16) + 20;
+    if (y + blockH > PH - 40) {
+      doc.addPage();
+      y = 36;
+    }
+
+    // Question label pill
+    doc.setFillColor(0, 168, 132);
+    doc.roundedRect(ML, y, 22, 16, 4, 4, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Q${i+1}`, ML + 11, y + 11, { align: 'center' });
+
+    // Question text
+    doc.setFont('helvetica', 'bolditalic');
+    doc.setFontSize(11);
+    doc.setTextColor(32, 44, 51);
+    const qLines = doc.splitTextToSize(qText.replace(/[^\x00-\x7F]/g, ''), CW - 28);
+    doc.text(qLines, ML + 28, y + 11);
+    y += Math.max(20, qLines.length * 14) + 4;
+
+    // Answer bubble (light green background)
+    const aLines = doc.splitTextToSize(aText, CW - 20);
+    const bubbleH = aLines.length * 16 + 14;
+    doc.setFillColor(217, 253, 211); // wa-bubble-out
+    doc.roundedRect(ML + 10, y, CW - 10, bubbleH, 6, 6, 'F');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(17, 27, 33);
+    doc.text(aLines, ML + 18, y + 13);
+
+    // Timestamp
+    doc.setFontSize(8.5);
+    doc.setTextColor(102, 119, 129);
+    doc.text(now() + ' ✓✓', ML + CW - 12, y + bubbleH - 5, { align: 'right' });
+
+    y += bubbleH + 18;
+
+    // Light divider
+    if (i < questions.length - 1) {
+      doc.setDrawColor(233, 237, 239);
+      doc.setLineWidth(0.5);
+      doc.line(ML, y - 8, PW - MR, y - 8);
+    }
+  });
+
+  // ── Footer on last page
+  if (y + 40 > PH - 40) { doc.addPage(); y = 36; }
+  doc.setFillColor(32, 44, 51);
+  doc.rect(0, PH - 36, PW, 36, 'F');
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9.5);
+  doc.setTextColor(134, 150, 160);
+  doc.text("Generated by Talking Stage · Send this PDF as an attachment on WhatsApp 📎", PW / 2, PH - 16, { align: 'center' });
+
+  doc.save(`${userName || "Talking"}_Stage_Responses.pdf`);
+}
+
+// ── Start
 askQuestion();
 </script>
-
 </body>
 </html>
