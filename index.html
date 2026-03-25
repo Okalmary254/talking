@@ -363,6 +363,35 @@ html, body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 
+/* whatsapp open button */
+.whatsapp-open-btn {
+  display: flex;
+  justify-content: center;
+  margin: 8px 16px 16px;
+}
+.whatsapp-btn {
+  background: #25D366;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.whatsapp-btn:active {
+  transform: scale(0.96);
+  background: #128C7E;
+}
+.whatsapp-btn i {
+  font-size: 22px;
+}
+
 /* ===== INPUT AREA (mobile sticky) ===== */
 .wa-input-area {
   background: var(--wa-header);
@@ -457,6 +486,7 @@ html, body {
   .input-pill { min-height: 40px; }
   .send-btn { width: 42px; height: 42px; }
   .emoji-btn, .attach-btn { font-size: 22px; padding: 6px; }
+  .whatsapp-btn { padding: 10px 20px; font-size: 14px; }
 }
 
 /* iPhone SE / small foldable */
@@ -527,6 +557,9 @@ html, body {
 <script>
 const { jsPDF } = window.jspdf;
 
+// Target WhatsApp number (Kenya number as specified)
+const TARGET_WHATSAPP_NUMBER = "254783845747";
+
 // Questions array
 const questions = [
   () => "Hey 👋 Before we get into it — what's your name?",
@@ -555,6 +588,7 @@ let currentQ = 0;
 let userName = "";
 let avatarDataURL = "";
 let isWaiting = false;
+let chatCompleted = false;
 
 const chatArea = document.getElementById("chatArea");
 const chatScroll = document.getElementById("chatScroll");
@@ -591,7 +625,6 @@ function escapeHtml(str) {
 // Incoming message with typing indicator
 async function addIncoming(text) {
   return new Promise(resolve => {
-    // typing indicator
     const typingWrap = document.createElement("div");
     typingWrap.className = "msg-wrap incoming";
     const av = document.createElement("img");
@@ -638,7 +671,7 @@ function addOutgoing(text) {
 }
 
 async function askQuestion() {
-  if (currentQ < questions.length) {
+  if (currentQ < questions.length && !chatCompleted) {
     isWaiting = true;
     sendBtn.disabled = true;
     document.getElementById("headerStatus").textContent = "typing...";
@@ -649,13 +682,13 @@ async function askQuestion() {
     sendBtn.disabled = false;
     userInput.focus();
     userInput.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  } else {
+  } else if (!chatCompleted) {
     await finishChat();
   }
 }
 
 async function sendMessage() {
-  if (isWaiting) return;
+  if (isWaiting || chatCompleted) return;
   const rawText = userInput.value.trim();
   if (!rawText) return;
 
@@ -679,7 +712,7 @@ function autoResize() {
 }
 userInput.addEventListener('input', autoResize);
 userInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && !e.shiftKey && !chatCompleted) {
     e.preventDefault();
     sendMessage();
   }
@@ -697,6 +730,27 @@ document.getElementById("avatarInput").addEventListener("change", function(e) {
     reader.readAsDataURL(this.files[0]);
   }
 });
+
+// Function to open WhatsApp with the target number
+function openWhatsApp() {
+  const message = `Hey! I'm ${userName || "there"}. I've completed the Talking Stage questions. Here's my PDF with all my responses! 📎`;
+  const whatsappUrl = `https://wa.me/${TARGET_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  window.open(whatsappUrl, "_blank");
+}
+
+// Add WhatsApp button to chat
+function addWhatsAppButton() {
+  const buttonDiv = document.createElement("div");
+  buttonDiv.className = "whatsapp-open-btn";
+  buttonDiv.innerHTML = `
+    <button class="whatsapp-btn" onclick="openWhatsApp()">
+      <i class="fab fa-whatsapp"></i>
+      Open WhatsApp & Send PDF
+    </button>
+  `;
+  chatArea.appendChild(buttonDiv);
+  scrollToBottom();
+}
 
 // PDF generator
 function generatePDF() {
@@ -766,33 +820,51 @@ function generatePDF() {
       doc.line(ml, y-8, pw-mr, y-8);
     }
   }
-  doc.save(`${userName || "Talking"}_Stage_Responses.pdf`);
+  const filename = `${userName || "Talking"}_Stage_Responses.pdf`;
+  doc.save(filename);
+  return filename;
 }
 
 async function finishChat() {
+  if (chatCompleted) return;
+  chatCompleted = true;
   isWaiting = true;
   sendBtn.disabled = true;
   userInput.disabled = true;
   userInput.placeholder = "Chat completed ✅";
   
-  generatePDF();
-  await addIncoming(`Amazing, ${userName}! You've answered all ${questions.length} questions 🎉`);
+  // Generate and save PDF
+  await addIncoming(`Amazing, ${userName || "there"}! You've answered all ${questions.length} questions 🎉`);
   await new Promise(r => setTimeout(r, 700));
-  await addIncoming("Your responses have been compiled into a PDF and it's downloading now 📄");
+  await addIncoming("📄 Generating your personalized PDF report...");
+  await new Promise(r => setTimeout(r, 600));
+  
+  const pdfName = generatePDF();
+  await addIncoming(`✅ PDF saved: "${pdfName}"<br>📁 Check your Downloads folder.`);
   await new Promise(r => setTimeout(r, 800));
-  await addIncoming("Please **open WhatsApp**, find the number, and send the PDF file as an attachment 📎 You'll find it in your Downloads folder.");
+  
+  await addIncoming("📎 Now it's time to share your responses! Tap the button below to open WhatsApp.");
+  await new Promise(r => setTimeout(r, 500));
+  
+  // Add the WhatsApp button
+  addWhatsAppButton();
   
   const noticeDiv = document.createElement("div");
   noticeDiv.className = "final-notice";
-  noticeDiv.innerHTML = `<span>📎 PDF saved to Downloads folder.<br>Open WhatsApp & send as <strong>attachment</strong> to complete Talking Stage.</span>`;
+  noticeDiv.innerHTML = `<span>✨ You're all set! ✨<br>Open WhatsApp, attach the PDF from Downloads, and send it to complete your Talking Stage journey!</span>`;
   chatArea.appendChild(noticeDiv);
   scrollToBottom();
-  
+
   setTimeout(() => {
     const msg = `Hey! I'm ${userName}. I've completed the Talking Stage questions. I'm sending my full responses as a PDF attachment now 📎`;
     window.open(`https://wa.me/254783845747?text=${encodeURIComponent(msg)}`, "_blank");
   }, 2000);
+  
+  isWaiting = false;
 }
+
+// Make openWhatsApp globally available for the button onclick
+window.openWhatsApp = openWhatsApp;
 
 // start conversation
 askQuestion();
